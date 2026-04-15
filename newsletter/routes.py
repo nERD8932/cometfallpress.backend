@@ -2,7 +2,7 @@ import secrets
 import logging
 from .extensions import limiter
 from .db import db, NewsletterUser
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify, request, redirect, url_for
 
 
 bp = Blueprint("main", __name__)
@@ -65,4 +65,8 @@ def unsubscribe(secret):
         logging.exception("Unsubscription request failed!")
         return jsonify({
             "status": "An error occurred while processing your request, please try again later!"
-        }), 500
+        }), 50
+
+bp.errorhandler(404)
+def page_not_found(e):
+    return redirect("https://cometfallpress.com/", code=404)
