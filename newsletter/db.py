@@ -1,47 +1,71 @@
-import sqlite3
+from .extensions import db
 from datetime import datetime
+from sqlalchemy import CheckConstraint, UniqueConstraint, ForeignKey
 
-import click
-from flask import current_app, g
+class NewsletterUser(db.Model):
+    __tablename__ = "newsletter_users"
 
+    email = db.Column(db.Text, primary_key=True)
+    name = db.Column(db.Text)
+    datetime_joined = db.Column(db.DateTime, default=datetime.utcnow)
 
-def get_db():
-    if 'db' not in g:
-        g.db = sqlite3.connect(
-            current_app.config['DATABASE'],
-            detect_types=sqlite3.PARSE_DECLTYPES
-        )
-        g.db.row_factory = sqlite3.Row
+    unsubscribed = db.Column(db.Boolean, nullable=False, default=False)
+    unsubscribe_secret = db.Column(db.Text, unique=True, nullable=False)
 
-    return g.db
-
-
-def close_db(e=None):
-    db = g.pop('db', None)
-
-    if db is not None:
-        db.close()
-
-def init_db():
-    db = get_db()
-
-    with current_app.open_resource('schema.sql') as f:
-        db.executescript(f.read().decode('utf8'))
-
-    db.commit()
-    db.close()
-
-@click.command('init-db')
-def init_db_command():
-    init_db()
-    click.echo('Initialized the database.')
-
-def init_app(app):
-    app.teardown_appcontext(close_db)
-    app.cli.add_command(init_db_command)
+    deliveries = db.relationship("NewsletterDelivery", back_populates="user")
 
 
+class NewsletterList(db.Model):
+    __tablename__ = "newsletter_list"
 
-sqlite3.register_converter(
-    "timestamp", lambda v: datetime.fromisoformat(v.decode())
-)
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    datetime_added = db.Column(db.DateTime, default=datetime.utcnow)
+
+    email_content = db.Column(db.Text, nullable=False)
+    sent_to_users = db.Column(db.Integer, nullable=False, default=0)
+    datetime_sent = db.Column(db.DateTime, nullable=True)
+
+    deliveries = db.relationship("NewsletterDelivery", back_populates="newsletter")
+
+
+class NewsletterDelivery(db.Model):
+    __tablename__ = "newsletter_deliveries"
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+
+    newsletter_id = db.Column(
+        db.Integer,
+        ForeignKey("newsletter_list.id"),
+        nullable=False
+    )
+
+    user_email = db.Column(
+        db.Text,
+        ForeignKey("newsletter_users.email"),
+        nullable=False
+    )
+
+    datetime_sent = db.Column(db.DateTime, nullable=True)
+
+    status = db.Column(
+        db.Text,
+        default="pending"
+    )
+
+    __table_args__ = (
+        CheckConstraint(
+            "status IN ('pending','sent','failed','opened')",
+            name="check_status"
+        ),
+        UniqueConstraint("newsletter_id", "user_email", name="unique_delivery"),
+    )
+
+    newsletter = db.relationship("NewsletterList", back_populates="deliveries")
+    user = db.relationship("NewsletterUser", back_populates="deliveries")
+
+
+class Admin(db.Model):
+    __tablename__ = "admins"
+
+    username = db.Column(db.Text, primary_key=True)
+    pw_hash = db.Column(db.Text, nullable=False)
