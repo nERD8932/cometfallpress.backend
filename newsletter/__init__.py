@@ -24,6 +24,9 @@ def create_app():
     from . import db
     db.init_app(app)
 
+    with app.app_context():
+        db.init_db()
+
     @app.post('/newsletter/subscribe')
     @limiter.limit("5 per hour")
     def subscribe():
