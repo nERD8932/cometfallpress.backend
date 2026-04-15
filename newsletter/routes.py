@@ -67,6 +67,6 @@ def unsubscribe(secret):
             "status": "An error occurred while processing your request, please try again later!"
         }), 50
 
-bp.errorhandler(404)
+@bp.errorhandler(404)
 def page_not_found(e):
     return redirect("https://cometfallpress.com/", code=404)
