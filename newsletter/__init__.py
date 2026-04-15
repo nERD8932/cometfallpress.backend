@@ -18,10 +18,8 @@ def create_app():
     load_dotenv()
     app.config.from_mapping(
         SECRET_KEY=os.getenv("FLASK_SECRET_KEY"),
-        DATABASE=os.path.join(app.instance_path, 'newsletter.sqlite'),
+        DATABASE="/data/database.db",
     )
-
-    os.makedirs(app.instance_path, exist_ok=True)
 
     from . import db
     db.init_app(app)
