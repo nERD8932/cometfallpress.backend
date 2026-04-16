@@ -10,8 +10,9 @@ bp = Blueprint("main", __name__)
 @bp.route('/newsletter/subscribe', methods=['POST'])
 @limiter.limit("5 per hour")
 def subscribe():
-    email = request.form.get("email")
-    name = request.form.get("name") or None
+    data = request.get_json(silent=True) or {}
+    email = data.get("email")
+    name = data.get("name") or None
 
     if not email:
         return jsonify({"status": "Email is required"}), 400
