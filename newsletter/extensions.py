@@ -1,3 +1,4 @@
+import logging
 from flask_migrate import Migrate
 from flask_limiter import Limiter
 from flask_sqlalchemy import SQLAlchemy
@@ -9,3 +10,5 @@ limiter = Limiter(
     key_func=get_remote_address,
     default_limits=["200 per day"]
 )
+
+logger = logging.getLogger(__name__)

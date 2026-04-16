@@ -1,7 +1,7 @@
 import secrets
 import logging
-from .extensions import limiter
 from .db import db, NewsletterUser
+from .extensions import limiter, logger
 from flask import Blueprint, jsonify, request, redirect, url_for
 
 
@@ -39,7 +39,7 @@ def subscribe():
 
     except (Exception,):
         db.session.rollback()
-        logging.exception("Subscription request failed!")
+        logger.exception("Subscription request failed!")
         return jsonify({"status": "An error occurred while processing your request, please try again later!"}), 500
 
 @limiter.limit("5 per hour")
@@ -62,11 +62,7 @@ def unsubscribe(secret):
             return jsonify({"status": "Unsubscribed!"}), 200
     except (Exception,):
         db.session.rollback()
-        logging.exception("Unsubscription request failed!")
+        logger.exception("Unsubscription request failed!")
         return jsonify({
             "status": "An error occurred while processing your request, please try again later!"
         }), 50
-
-@bp.errorhandler(404)
-def page_not_found(e):
-    return redirect("https://cometfallpress.com/", code=404)
