@@ -1,8 +1,10 @@
 import secrets
-import logging
-from .db import db, NewsletterUser
-from .extensions import limiter, logger
-from flask import Blueprint, jsonify, request, redirect, url_for
+from flask_wtf.csrf import generate_csrf
+from .db import db, NewsletterUser, Admin
+from werkzeug.security import check_password_hash
+from .extensions import limiter, logger, login_manager
+from flask import Blueprint, jsonify, request, redirect, session
+from flask_login import login_required, login_user, logout_user, current_user
 
 
 bp = Blueprint("main", __name__)
@@ -67,3 +69,49 @@ def unsubscribe(secret):
         return jsonify({
             "status": "An error occurred while processing your request, please try again later!"
         }), 50
+
+@bp.route('/login', methods=['POST'])
+@limiter.limit("5 per hour")
+def login():
+    data = request.get_json(silent=True) or {}
+    username = data.get("username")
+    pw = data.get("pw")
+
+    if not username or not pw:
+        return jsonify({"status": "Invalid Request"}), 400
+
+    user = Admin.query.filter_by(username=username).first()
+    if not user or not check_password_hash(user.pw_hash, pw):
+        return jsonify({"status": "Invalid Request"}), 400
+
+    login_user(user)
+    session.permanent = True
+    return jsonify({"status": "Logged in"}), 200
+
+
+@bp.route("/logout")
+@login_required
+def logout():
+    logout_user()
+    return redirect("https://www.cometfallpress.com")
+
+@bp.get("/csrf")
+def get_csrf():
+    return jsonify({"csrf_token": generate_csrf()})
+
+@login_manager.user_loader
+def load_user(user_id):
+    return Admin.query.get(user_id)
+
+@bp.route("/me", methods=["GET"])
+@limiter.limit("2000 per day")
+@login_required
+def me():
+    if current_user.is_anonymous:
+        return jsonify({
+            "status": "Not Logged In!",
+        }), 403
+
+    return jsonify({
+        "username": current_user.username,
+    }), 200
