@@ -120,7 +120,17 @@ def me():
         "username": current_user.username,
     }), 200
 
-@bp.post("/admin")
+@bp.post("/newsletter/list")
 @login_required
-def admin():
-    
+def newsletter_list():
+    return jsonify({})
+
+@bp.post("/newsletter/load")
+@login_required
+def newsletter_list():
+    return jsonify({})
+
+@bp.post("/newsletter/save")
+@login_required
+def newsletter_list():
+    return jsonify({})
