@@ -22,13 +22,13 @@ def create_app():
         PERMANENT_SESSION_LIFETIME=timedelta(minutes=120),
         SQLALCHEMY_DATABASE_URI=f"sqlite:///{db_path}",
         SQLALCHEMY_TRACK_MODIFICATIONS=False,
-        WTF_CSRF_TRUSTED_ORIGINS= [os.getenv("FRONTEND_ORIGIN", "https://www.cometfallpress.com")]
+        WTF_CSRF_TRUSTED_ORIGINS= [os.getenv("FRONTEND_ORIGIN"), "https://cometfallpress.com", "https://www.cometfallpress.com", "https://api.cometfallpress.com"]
     )
 
     CORS(
         app,
         supports_credentials=True,
-        origins=[os.getenv("FRONTEND_ORIGIN", "https://www.cometfallpress.com")]
+        origins=[os.getenv("FRONTEND_ORIGIN"), "https://cometfallpress.com", "https://www.cometfallpress.com", "https://api.cometfallpress.com"]
     )
     db.init_app(app)
     migrate.init_app(app, db)
