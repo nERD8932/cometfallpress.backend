@@ -1,5 +1,7 @@
+import uuid
 from .extensions import db
 from datetime import datetime
+from flask_login import UserMixin
 from sqlalchemy import CheckConstraint, UniqueConstraint, ForeignKey
 
 class NewsletterUser(db.Model):
@@ -64,8 +66,9 @@ class NewsletterDelivery(db.Model):
     user = db.relationship("NewsletterUser", back_populates="deliveries")
 
 
-class Admin(db.Model):
+class Admin(db.Model, UserMixin):
     __tablename__ = "admins"
 
-    username = db.Column(db.Text, primary_key=True)
-    pw_hash = db.Column(db.Text, nullable=False)
+    id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    username = db.Column(db.Text, unique=True, nullable=False)
+    pw_hash = db.Column(db.Text, unique=True, nullable=False)

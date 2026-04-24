@@ -1,13 +1,16 @@
+import os
 import secrets
-import logging
-from .db import db, NewsletterUser
-from .extensions import limiter, logger
-from flask import Blueprint, jsonify, request, redirect, url_for
+from flask_wtf.csrf import generate_csrf
+from .db import db, NewsletterUser, Admin
+from werkzeug.security import check_password_hash
+from .extensions import limiter, logger, login_manager
+from flask import Blueprint, jsonify, request, redirect, session
+from flask_login import login_required, login_user, logout_user, current_user
 
 
 bp = Blueprint("main", __name__)
 
-@bp.route('/newsletter/subscribe', methods=['POST'])
+@bp.post('/newsletter/subscribe')
 @limiter.limit("5 per hour")
 def subscribe():
     data = request.get_json(silent=True) or {}
@@ -44,7 +47,7 @@ def subscribe():
         return jsonify({"status": "An error occurred while processing your request, please try again later!"}), 500
 
 @limiter.limit("5 per hour")
-@bp.route('/newsletter/unsubscribe/<secret>', methods=['GET'])
+@bp.get('/newsletter/unsubscribe/<secret>')
 def unsubscribe(secret):
     if secret == "" or secret is None:
         return jsonify({"status": "Invalid request!"}), 400
@@ -67,3 +70,67 @@ def unsubscribe(secret):
         return jsonify({
             "status": "An error occurred while processing your request, please try again later!"
         }), 50
+
+@bp.post('/login')
+@limiter.limit("5 per hour")
+def login():
+    data = request.get_json(silent=True) or {}
+    username = data.get("username")
+    pw = data.get("pw")
+
+    if not username or not pw:
+        return jsonify({"status": "Invalid Request"}), 400
+
+    user = Admin.query.filter_by(username=username).first()
+    if not user or not check_password_hash(user.pw_hash, pw):
+        return jsonify({"status": "Invalid Request"}), 400
+
+    login_user(user)
+    session.permanent = True
+    return jsonify({"status": "Logged in"}), 200
+
+
+@bp.get("/logout")
+@login_required
+def logout():
+    logout_user()
+    return jsonify({"status": "Logged out", "redirect_to": "/"}), 200
+
+@bp.get("/csrf")
+def get_csrf():
+    return jsonify({"csrf_token": generate_csrf()})
+
+@login_manager.user_loader
+def load_user(user_id):
+    return Admin.query.get(user_id)
+
+@login_manager.unauthorized_handler
+def unauthorized():
+    return jsonify({"status": "Unauthorized", "redirect_to": "/login"}), 401
+
+@bp.get("/me")
+def me():
+    if current_user is None or current_user.is_anonymous:
+        return jsonify({
+            "status": "Not Logged In!",
+        }), 401
+
+    return jsonify({
+        "status": "Logged In.",
+        "username": current_user.username,
+    }), 200
+
+@bp.post("/newsletter/list")
+@login_required
+def newsletter_list():
+    return jsonify({})
+
+@bp.post("/newsletter/load")
+@login_required
+def newsletter_list():
+    return jsonify({})
+
+@bp.post("/newsletter/save")
+@login_required
+def newsletter_list():
+    return jsonify({})
