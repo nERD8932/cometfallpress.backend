@@ -127,10 +127,10 @@ def newsletter_list():
 
 @bp.post("/newsletter/load")
 @login_required
-def newsletter_list():
+def newsletter_load():
     return jsonify({})
 
 @bp.post("/newsletter/save")
 @login_required
-def newsletter_list():
+def newsletter_save():
     return jsonify({})
