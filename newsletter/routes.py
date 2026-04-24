@@ -1,3 +1,4 @@
+import os
 import secrets
 from flask_wtf.csrf import generate_csrf
 from .db import db, NewsletterUser, Admin
@@ -9,7 +10,7 @@ from flask_login import login_required, login_user, logout_user, current_user
 
 bp = Blueprint("main", __name__)
 
-@bp.route('/newsletter/subscribe', methods=['POST'])
+@bp.post('/newsletter/subscribe')
 @limiter.limit("5 per hour")
 def subscribe():
     data = request.get_json(silent=True) or {}
@@ -46,7 +47,7 @@ def subscribe():
         return jsonify({"status": "An error occurred while processing your request, please try again later!"}), 500
 
 @limiter.limit("5 per hour")
-@bp.route('/newsletter/unsubscribe/<secret>', methods=['GET'])
+@bp.get('/newsletter/unsubscribe/<secret>')
 def unsubscribe(secret):
     if secret == "" or secret is None:
         return jsonify({"status": "Invalid request!"}), 400
@@ -70,7 +71,7 @@ def unsubscribe(secret):
             "status": "An error occurred while processing your request, please try again later!"
         }), 50
 
-@bp.route('/login', methods=['POST'])
+@bp.post('/login')
 @limiter.limit("5 per hour")
 def login():
     data = request.get_json(silent=True) or {}
@@ -89,11 +90,11 @@ def login():
     return jsonify({"status": "Logged in"}), 200
 
 
-@bp.route("/logout")
+@bp.get("/logout")
 @login_required
 def logout():
     logout_user()
-    return redirect("https://www.cometfallpress.com")
+    return jsonify({"status": "Logged out", "redirect_to": "/"}), 200
 
 @bp.get("/csrf")
 def get_csrf():
@@ -103,15 +104,23 @@ def get_csrf():
 def load_user(user_id):
     return Admin.query.get(user_id)
 
-@bp.route("/me", methods=["GET"])
-@limiter.limit("2000 per day")
-@login_required
+@login_manager.unauthorized_handler
+def unauthorized():
+    return jsonify({"status": "Unauthorized", "redirect_to": "/login"}), 401
+
+@bp.get("/me")
 def me():
-    if current_user.is_anonymous:
+    if current_user is None or current_user.is_anonymous:
         return jsonify({
             "status": "Not Logged In!",
-        }), 403
+        }), 401
 
     return jsonify({
+        "status": "Logged In.",
         "username": current_user.username,
     }), 200
+
+@bp.post("/admin")
+@login_required
+def admin():
+    

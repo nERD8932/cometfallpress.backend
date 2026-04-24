@@ -11,17 +11,6 @@ from .extensions import db, migrate, csrf, login_manager, logger, limiter
 
 def create_app():
     app = Flask(__name__, static_folder='public', static_url_path='')
-    CORS(
-        app,
-        supports_credentials = True,
-        resources={
-        r"/*": {
-            "origins": [
-                os.getenv("FRONTEND_ORIGIN", "https://www.cometfallpress.com"),
-            ]
-        }
-    })
-
     db_path = os.getenv("DATABASE_PATH")
     os.makedirs(os.path.dirname(db_path), exist_ok=True)
 
@@ -36,6 +25,11 @@ def create_app():
         WTF_CSRF_TRUSTED_ORIGINS= [os.getenv("FRONTEND_ORIGIN", "https://www.cometfallpress.com")]
     )
 
+    CORS(
+        app,
+        supports_credentials=True,
+        origins=[os.getenv("FRONTEND_ORIGIN", "https://www.cometfallpress.com")]
+    )
     db.init_app(app)
     migrate.init_app(app, db)
     csrf.init_app(app)
