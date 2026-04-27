@@ -1,4 +1,3 @@
-import os
 import secrets
 from flask_wtf.csrf import generate_csrf
 from .db import db, NewsletterUser, Admin
