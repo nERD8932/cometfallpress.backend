@@ -1,4 +1,3 @@
-import os
 import secrets
 from flask_wtf.csrf import generate_csrf
 from .db import db, NewsletterUser, Admin
@@ -127,10 +126,10 @@ def newsletter_list():
 
 @bp.post("/newsletter/load")
 @login_required
-def newsletter_list():
+def newsletter_load():
     return jsonify({})
 
 @bp.post("/newsletter/save")
 @login_required
-def newsletter_list():
+def newsletter_save():
     return jsonify({})
