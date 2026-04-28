@@ -153,7 +153,7 @@ def newsletter_load(nid):
 @login_required
 def newsletter_save(nid):
     data = request.get_json(silent=True) or {}
-    if None in [data.get("id"), data.get("delta"), data.get("html")] or data.get("id") != nid:
+    if None in [data.get("nid"), data.get("delta"), data.get("html")] or data.get("nid") != nid:
         return jsonify({"status": "Invalid request!"}), 400
 
     newsletter = NewsletterList.query.filter_by(id=nid).first()
