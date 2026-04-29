@@ -1,9 +1,11 @@
 import secrets
+from datetime import UTC
+from datetime import datetime
 from flask_wtf.csrf import generate_csrf
-from .db import db, NewsletterUser, Admin
 from werkzeug.security import check_password_hash
 from .extensions import limiter, logger, login_manager
-from flask import Blueprint, jsonify, request, redirect, session
+from flask import Blueprint, jsonify, request, session
+from .db import db, NewsletterUser, Admin, NewsletterList
 from flask_login import login_required, login_user, logout_user, current_user
 
 
@@ -89,7 +91,7 @@ def login():
     return jsonify({"status": "Logged in"}), 200
 
 
-@bp.get("/logout")
+@bp.post("/logout")
 @login_required
 def logout():
     logout_user()
@@ -119,17 +121,69 @@ def me():
         "username": current_user.username,
     }), 200
 
+@bp.post("/newsletter/subscribers")
+@login_required
+def newsletter_get_subscribers():
+    subscribers = NewsletterUser.query.all()
+    return jsonify([u.to_dict() for u in subscribers if u.to_dict() is not None]), 200
+
+@limiter.limit("5 per hour")
+@bp.post("/newsletter/new")
+@login_required
+def newsletter_new():
+    newsletter = NewsletterList(
+        created_by=current_user.id,
+    )
+    db.session.add(newsletter)
+    db.session.commit()
+    return jsonify({"status": "Created new Newsletter", "id": newsletter.id}), 200
+
 @bp.post("/newsletter/list")
 @login_required
 def newsletter_list():
-    return jsonify({})
+    newsletters = NewsletterList.query.all()
+    return jsonify([n.get_identifiers() for n in newsletters])
 
-@bp.post("/newsletter/load")
+@bp.post("/newsletter/load/<nid>")
 @login_required
-def newsletter_load():
-    return jsonify({})
+def newsletter_load(nid):
+    data = request.get_json(silent=True) or {}
+    rnid = str(data.get("nid"))
 
-@bp.post("/newsletter/save")
+    if rnid is None or rnid != str(nid):
+        return jsonify({"status": "Invalid request!"}), 400
+
+    newsletter = NewsletterList.query.filter_by(id=rnid).first()
+    if newsletter is None:
+        return jsonify({"status": "Invalid request!"}), 400
+    return jsonify(newsletter.get_content()), 200
+
+@bp.post("/newsletter/save/<nid>")
 @login_required
-def newsletter_save():
-    return jsonify({})
+def newsletter_save(nid):
+    data = request.get_json(silent=True) or {}
+    delta = str(data.get("delta"))
+    rnid = str(data.get("nid"))
+
+    if None in [rnid, delta] or rnid != str(nid):
+        return jsonify({"status": "Invalid request!"}), 400
+
+    newsletter = NewsletterList.query.filter_by(id=rnid).first()
+
+    if newsletter.delta_content != delta:
+        newsletter.delta_content = delta
+
+    newsletter.last_update_by = current_user.id
+    newsletter.datetime_updated = datetime.now(UTC)
+    db.session.commit()
+
+    return jsonify({"status": "Saved"}), 200
+
+@bp.errorhandler(Exception)
+def handle_global_exception(e):
+    logger.error(e)
+    response = jsonify({
+        "status": "Internal Server Error",
+    })
+    return response, 500
+
