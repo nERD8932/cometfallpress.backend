@@ -127,6 +127,7 @@ def newsletter_get_subscribers():
     subscribers = NewsletterUser.query.all()
     return jsonify([u.to_dict() for u in subscribers if u.to_dict() is not None]), 200
 
+@limiter.limit("5 per hour")
 @bp.post("/newsletter/new")
 @login_required
 def newsletter_new():
@@ -146,20 +147,43 @@ def newsletter_list():
 @bp.post("/newsletter/load/<nid>")
 @login_required
 def newsletter_load(nid):
-    newsletter = NewsletterList.query.filter_by(id=nid).first()
+    data = request.get_json(silent=True) or {}
+    rnid = str(data.get("nid"))
+
+    if rnid is None or rnid != str(nid):
+        return jsonify({"status": "Invalid request!"}), 400
+
+    newsletter = NewsletterList.query.filter_by(id=rnid).first()
+    if newsletter is None:
+        return jsonify({"status": "Invalid request!"}), 400
     return jsonify(newsletter.get_content()), 200
 
 @bp.post("/newsletter/save/<nid>")
 @login_required
 def newsletter_save(nid):
     data = request.get_json(silent=True) or {}
-    if None in [data.get("nid"), data.get("delta"), data.get("html")] or data.get("nid") != nid:
+    delta = str(data.get("delta"))
+    rnid = str(data.get("nid"))
+
+    if None in [rnid, delta] or rnid != str(nid):
         return jsonify({"status": "Invalid request!"}), 400
 
-    newsletter = NewsletterList.query.filter_by(id=nid).first()
-    newsletter.delta = str(data.get("delta"))
-    newsletter.html = str(data.get("html"))
+    newsletter = NewsletterList.query.filter_by(id=rnid).first()
+
+    if newsletter.delta_content != delta:
+        newsletter.delta_content = delta
+
     newsletter.last_update_by = current_user.id
     newsletter.datetime_updated = datetime.now(UTC)
     db.session.commit()
+
     return jsonify({"status": "Saved"}), 200
+
+@bp.errorhandler(Exception)
+def handle_global_exception(e):
+    logger.error(e)
+    response = jsonify({
+        "status": "Internal Server Error",
+    })
+    return response, 500
+
