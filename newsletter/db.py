@@ -20,7 +20,8 @@ class NewsletterList(db.Model):
     created_by = db.Column(db.String(36), db.ForeignKey("admins.id"), nullable=True)
     last_update_by = db.Column(db.String(36), db.ForeignKey("admins.id"), nullable=True)
     datetime_updated = db.Column(db.DateTime, nullable=True, default=None)
-    delta_content = db.Column(db.Text, nullable=False, default='{"delta":"","html":""}')
+    title = db.Column(db.Text, nullable=True, default=lambda: str('CometfallPress Newsletter Update'))
+    delta_content = db.Column(db.Text, nullable=False, default=lambda: str('{"delta":"","html":""}'))
     sent_to_users = db.Column(db.Boolean, nullable=False, default=False)
     datetime_sent = db.Column(db.DateTime, nullable=True, default=None)
 
@@ -39,6 +40,7 @@ class NewsletterList(db.Model):
     def get_content(self):
         return {
             "id": self.id,
+            "title": self.title,
             "datetime_added_raw": int(self.datetime_added.timestamp()) if self.datetime_added else None,
             "datetime_added": self.datetime_added.strftime("%A, %B %d, %Y") if self.datetime_added else None,
             "datetime_updated_raw": int(self.datetime_updated.timestamp()) if self.datetime_updated else None,
@@ -53,6 +55,7 @@ class NewsletterList(db.Model):
     def get_identifiers(self):
         return {
             "id": self.id,
+            "title": self.title,
             "datetime_added_raw": int(self.datetime_added.timestamp()) if self.datetime_added else None,
             "datetime_added": self.datetime_added.strftime("%A, %B %d, %Y") if self.datetime_added else None,
             "datetime_updated_raw": int(self.datetime_updated.timestamp()) if self.datetime_updated else None,

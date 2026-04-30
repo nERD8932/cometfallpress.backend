@@ -80,22 +80,22 @@ def login():
     pw = data.get("pw")
 
     if not username or not pw:
-        return jsonify({"status": "Invalid Request"}), 400
+        return jsonify({"status": "Invalid Request!"}), 400
 
     user = Admin.query.filter_by(username=username).first()
     if not user or not check_password_hash(user.pw_hash, pw):
-        return jsonify({"status": "Invalid Request"}), 400
+        return jsonify({"status": "Invalid Request!"}), 400
 
     login_user(user)
     session.permanent = True
-    return jsonify({"status": "Logged in"}), 200
+    return jsonify({"status": "Logged in!"}), 200
 
 
 @bp.post("/logout")
 @login_required
 def logout():
     logout_user()
-    return jsonify({"status": "Logged out", "redirect_to": "/"}), 200
+    return jsonify({"status": "Logged out!", "redirect_to": "/"}), 200
 
 @bp.get("/csrf")
 def get_csrf():
@@ -107,7 +107,7 @@ def load_user(user_id):
 
 @login_manager.unauthorized_handler
 def unauthorized():
-    return jsonify({"status": "Unauthorized", "redirect_to": "/login"}), 401
+    return jsonify({"status": "Unauthorized!", "redirect_to": "/login"}), 401
 
 @bp.get("/me")
 def me():
@@ -117,7 +117,7 @@ def me():
         }), 401
 
     return jsonify({
-        "status": "Logged In.",
+        "status": "Logged In!",
         "username": current_user.username,
     }), 200
 
@@ -136,7 +136,7 @@ def newsletter_new():
     )
     db.session.add(newsletter)
     db.session.commit()
-    return jsonify({"status": "Created new Newsletter", "id": newsletter.id}), 200
+    return jsonify({"status": "Created a new newsletter!", "id": newsletter.id}), 200
 
 @bp.post("/newsletter/list")
 @login_required
@@ -163,6 +163,7 @@ def newsletter_load(nid):
 def newsletter_save(nid):
     data = request.get_json(silent=True) or {}
     delta = str(data.get("delta"))
+    title = str(data.get("title"))
     rnid = str(data.get("nid"))
 
     if None in [rnid, delta] or rnid != str(nid):
@@ -170,14 +171,20 @@ def newsletter_save(nid):
 
     newsletter = NewsletterList.query.filter_by(id=rnid).first()
 
-    if newsletter.delta_content != delta:
+    if newsletter is None:
+        return jsonify({"status": "Invalid request!"}), 400
+
+    if delta and newsletter.delta_content != delta:
         newsletter.delta_content = delta
+
+    if title and newsletter.title != title:
+        newsletter.title = title
 
     newsletter.last_update_by = current_user.id
     newsletter.datetime_updated = datetime.now(UTC)
     db.session.commit()
 
-    return jsonify({"status": "Saved"}), 200
+    return jsonify({"status": "Saved!"}), 200
 
 @bp.errorhandler(Exception)
 def handle_global_exception(e):
@@ -185,5 +192,6 @@ def handle_global_exception(e):
     response = jsonify({
         "status": "Internal Server Error",
     })
+    db.session.rollback()
     return response, 500
 
