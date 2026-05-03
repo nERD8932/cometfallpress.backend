@@ -7,12 +7,14 @@ from flask_cors import CORS
 from datetime import timedelta
 from werkzeug.middleware.proxy_fix import ProxyFix
 from werkzeug.security import generate_password_hash
-from .extensions import db, migrate, csrf, login_manager, logger, limiter
+from .extensions import db, migrate, csrf, login_manager, logger, limiter, upload_path
+
 
 def create_app():
     app = Flask(__name__, static_folder='public', static_url_path='')
-    db_path = os.getenv("DATABASE_PATH")
+    db_path = os.getenv("DATABASE_PATH", "./database.db")
     os.makedirs(os.path.dirname(db_path), exist_ok=True)
+    os.makedirs(upload_path, exist_ok=True)
 
     app.config.from_mapping(
         SECRET_KEY=os.getenv("FLASK_SECRET_KEY"),
@@ -28,7 +30,7 @@ def create_app():
     CORS(
         app,
         supports_credentials=True,
-        origins=[os.getenv("FRONTEND_ORIGIN"), "https://cometfallpress.com", "https://www.cometfallpress.com", "https://api.cometfallpress.com"]
+        origins=[os.getenv("FRONTEND_ORIGIN", ""), "https://cometfallpress.com", "https://www.cometfallpress.com", "https://api.cometfallpress.com"]
     )
     db.init_app(app)
     migrate.init_app(app, db)
@@ -44,7 +46,7 @@ def create_app():
     return app
 
 def create_admins():
-    admins = json.loads(os.getenv("ADMINS"))
+    admins = json.loads(os.getenv("ADMINS", "[]"))
     for a in admins:
         try:
             admin = Admin.query.filter_by(username=a["username"]).first()

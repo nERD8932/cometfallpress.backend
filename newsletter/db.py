@@ -122,3 +122,9 @@ class NewsletterDelivery(db.Model):
 
     newsletter = db.relationship("NewsletterList", back_populates="deliveries")
     user = db.relationship("NewsletterUser", back_populates="deliveries")
+
+class Image(db.Model):
+    __tablename__ = "images"
+    filename = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    mime_type = db.Column(db.String(100), nullable=False)
+    hash = db.Column(db.String(64), unique=True, nullable=False)
