@@ -1,13 +1,16 @@
+import json
+import os
+import uuid
+from PIL import Image as Img
 import secrets
 from datetime import UTC
 from datetime import datetime
 from flask_wtf.csrf import generate_csrf
 from werkzeug.security import check_password_hash
-from .extensions import limiter, logger, login_manager
-from flask import Blueprint, jsonify, request, session
-from .db import db, NewsletterUser, Admin, NewsletterList
+from flask import Blueprint, jsonify, request, session, send_file
+from .db import db, NewsletterUser, Admin, NewsletterList, Image
 from flask_login import login_required, login_user, logout_user, current_user
-
+from .extensions import limiter, logger, login_manager, allowed_image_mimes, upload_path, backend_origin, hash_file
 
 bp = Blueprint("main", __name__)
 
@@ -185,6 +188,77 @@ def newsletter_save(nid):
     db.session.commit()
 
     return jsonify({"status": "Saved!"}), 200
+
+@bp.post("/newsletter/publish/<nid>")
+@login_required
+def newsletter_publish(nid):
+    data = request.get_json(silent=True) or {}
+    print(data)
+    rnid = str(data.get("nid"))
+
+    if rnid is None or rnid != str(nid):
+        return jsonify({"status": "Invalid request!"}), 400
+
+    newsletter = NewsletterList.query.filter_by(id=rnid).first()
+    if newsletter is None:
+        return jsonify({"status": "Invalid request!"}), 400
+    else:
+        html_content = json.loads(newsletter.delta_content).get("html")
+        print(html_content)
+
+    return jsonify(newsletter.get_content()), 200
+
+@bp.post("/newsletter/upload")
+@login_required
+def upload_image():
+    file = request.files.get('image')
+
+    if not file or not file.filename:
+        return jsonify({"status": "Failed!"}), 400
+
+    ext = str(file.filename).split(".")[-1]
+    if ext not in allowed_image_mimes:
+        return jsonify({"status": "Disallowed file type!"}), 400
+
+    file_hash = hash_file(file)
+
+    existing = Image.query.filter_by(hash=file_hash).first()
+    if existing:
+        return jsonify({
+            "status": "Saved!",
+            "image_url": f"{backend_origin}/images/{existing.filename}"
+        }), 200
+
+    name = str(uuid.uuid4())
+    mime_type = str(file.mimetype)
+
+    temp_path = upload_path / f"{name}.upload"
+    final_path = upload_path / f"{name}.png"
+    file.save(temp_path)
+
+    try:
+        with Img.open(temp_path) as im:
+            im.verify()
+        with Img.open(temp_path) as im:
+            im.save(final_path)
+            mime_type = im.get_format_mimetype()
+        temp_path.unlink(missing_ok=True)
+
+    except (Exception, ) as e:
+        temp_path.unlink(missing_ok=True)
+        final_path.unlink(missing_ok=True)
+        return jsonify({"status": "Image rejected!"}), 400
+
+    img = Image(filename=name, mime_type=mime_type, hash=file_hash)
+    db.session.add(img)
+    db.session.commit()
+
+    return jsonify({"status": "Saved!", "image_url": f"{backend_origin}/images/{name}"}), 200
+
+@bp.get("/images/<image_id>")
+def image(image_id):
+    row = Image.query.get_or_404(image_id)
+    return send_file(str(upload_path / f"{row.filename}.png"), mimetype=row.mime_type)
 
 @bp.errorhandler(Exception)
 def handle_global_exception(e):

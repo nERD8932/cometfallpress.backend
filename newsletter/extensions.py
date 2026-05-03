@@ -1,4 +1,7 @@
+import os
 import logging
+import hashlib
+from pathlib import Path
 from flask_migrate import Migrate
 from flask_limiter import Limiter
 from flask_login import LoginManager
@@ -22,3 +25,16 @@ csrf = CSRFProtect()
 login_manager = LoginManager()
 logger = logging.getLogger(__name__)
 limiter = Limiter(key_func=get_remote_address, default_limits=["2000 per day"])
+allowed_image_mimes = {"jpg", "jpeg", "png", "webp"}
+upload_path = Path(os.getenv("UPLOAD_PATH", ""))
+backend_origin = os.getenv('BACKEND_ORIGIN', 'https://api.cometfallpress.com')
+hasher = hashlib.sha256()
+
+def hash_file(file_storage):
+    hasher = hashlib.sha256()
+
+    for chunk in iter(lambda: file_storage.stream.read(8192), b""):
+        hasher.update(chunk)
+
+    file_storage.stream.seek(0)
+    return hasher.hexdigest()
