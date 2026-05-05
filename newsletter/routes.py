@@ -1,16 +1,28 @@
-import json
 import os
+import json
 import uuid
-from PIL import Image as Img
+import bleach
+import logging
 import secrets
 from datetime import UTC
+from PIL import Image as Img
 from datetime import datetime
+from email.message import EmailMessage
 from flask_wtf.csrf import generate_csrf
 from werkzeug.security import check_password_hash
+from .db import db, NewsletterUser, Admin, NewsletterList, Image, NewsletterDelivery
 from flask import Blueprint, jsonify, request, session, send_file
-from .db import db, NewsletterUser, Admin, NewsletterList, Image
 from flask_login import login_required, login_user, logout_user, current_user
-from .extensions import limiter, logger, login_manager, allowed_image_mimes, upload_path, backend_origin, hash_file
+from .extensions import (
+    logger,
+    limiter,
+    get_smtp,
+    hash_file,
+    upload_path,
+    login_manager,
+    backend_origin,
+    allowed_image_mimes, clean_html,
+)
 
 bp = Blueprint("main", __name__)
 
@@ -165,7 +177,9 @@ def newsletter_load(nid):
 @login_required
 def newsletter_save(nid):
     data = request.get_json(silent=True) or {}
-    delta = str(data.get("delta"))
+    delta = json.loads(data.get("delta", ""))
+    delta["html"] = clean_html(str(delta.get("html", "")))
+    delta = json.dumps(delta)
     title = str(data.get("title"))
     rnid = str(data.get("nid"))
 
@@ -193,20 +207,93 @@ def newsletter_save(nid):
 @login_required
 def newsletter_publish(nid):
     data = request.get_json(silent=True) or {}
-    print(data)
     rnid = str(data.get("nid"))
+    p_type = str(request.args.get('type'))
 
-    if rnid is None or rnid != str(nid):
+    if rnid is None or rnid != str(nid) or p_type not in ["draft", "publish"]:
         return jsonify({"status": "Invalid request!"}), 400
 
     newsletter = NewsletterList.query.filter_by(id=rnid).first()
     if newsletter is None:
         return jsonify({"status": "Invalid request!"}), 400
     else:
-        html_content = json.loads(newsletter.delta_content).get("html")
-        print(html_content)
+        emails = []
+        errors = {}
 
-    return jsonify(newsletter.get_content()), 200
+        try:
+            html_content = str(json.loads(newsletter.delta_content).get("html"))
+            sender_email = os.environ["GMAIL_USER"]
+        except (Exception, ) as e:
+            logger.error(e)
+            return jsonify({"status": "An internal server error occurred, please try again later!"}), 500
+
+        if p_type == "publish":
+            for usr in NewsletterUser.query.all():
+                try:
+                    msg = EmailMessage()
+                    msg["Subject"] = newsletter.title
+                    msg["From"] = sender_email
+                    msg["To"] = usr.email
+                    iden = usr.name if usr.name is not None else usr.email
+                    msg.set_content("This email requires an HTML-compatible client.")
+                    msg.add_alternative(html_content.replace("{{username}}", iden), subtype="html")
+                    emails.append(msg)
+                    ns_delivery = NewsletterDelivery(
+                        newsletter_id = newsletter.id,
+                        user_email = usr.email,
+                        status = "pending"
+                    )
+                    db.session.add(ns_delivery)
+                except (Exception, ) as e:
+                    logging.error(e)
+                    errors[usr.email] = str(e)
+                    db.session.rollback()
+            db.session.commit()
+        else:
+            try:
+                msg = EmailMessage()
+                msg["Subject"] = newsletter.title
+                msg["From"] = sender_email
+                msg["To"] = sender_email
+                msg.set_content("This email requires an HTML-compatible client.")
+                msg.add_alternative(html_content, subtype="html")
+                emails.append(msg)
+            except (Exception,) as e:
+                logging.error(e)
+                return jsonify({"status": "An internal server error occurred, please try again later!"}), 500
+
+        smtp = get_smtp()
+        if smtp is None:
+            return jsonify({"status": "An internal server error occurred, please try again later!"}), 500
+
+        for email in emails:
+            try:
+                smtp.send_message(
+                    email,
+                    to_addrs=[email["To"]]
+                )
+                if p_type == "publish":
+                    nsd = NewsletterDelivery.query.filter_by(newsletter_id=newsletter.id, user_email=email["To"]).first()
+                    nsd.status = "sent"
+                    db.session.add(nsd)
+                    db.session.commit()
+            except (Exception,) as e:
+                logger.error(e)
+                errors[email["To"]] = str(e)
+                if p_type == "publish":
+                    db.session.rollback()
+                    try:
+                        nsd = NewsletterDelivery.query.filter_by(newsletter_id=newsletter.id, user_email=email["To"]).first()
+                        nsd.status = "failed"
+                        db.session.add(nsd)
+                        db.session.commit()
+                    except (Exception,) as e:
+                        pass
+
+        if len(errors) > 0:
+            return jsonify({"status": "An error occurred while sending emails to some of the addresses", "errors": errors}), 500
+
+    return jsonify({"status": "Published!"}), 200
 
 @bp.post("/newsletter/upload")
 @login_required
