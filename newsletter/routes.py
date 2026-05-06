@@ -1,7 +1,6 @@
 import os
 import json
 import uuid
-import bleach
 import logging
 import secrets
 from datetime import UTC
@@ -275,7 +274,10 @@ def newsletter_publish(nid):
                 if p_type == "publish":
                     nsd = NewsletterDelivery.query.filter_by(newsletter_id=newsletter.id, user_email=email["To"]).first()
                     nsd.status = "sent"
+                    newsletter.sent_to_users = True
+                    newsletter.datetime_sent = datetime.now()
                     db.session.add(nsd)
+                    db.session.add(newsletter)
                     db.session.commit()
             except (Exception,) as e:
                 logger.error(e)
