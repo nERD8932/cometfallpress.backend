@@ -26,10 +26,11 @@ from .extensions import (
 bp = Blueprint("main", __name__)
 
 def notify(subject, content):
-     try:
+    try:
         sender_email = os.environ["GMAIL_USER"]
         to_email = os.environ["NOTIFY_EMAIL"]
-        if None in [sender_email, to_email]:
+        smtp = get_smtp()
+        if None in [sender_email, to_email, smtp]:
             return
 
         msg = EmailMessage()
@@ -37,18 +38,14 @@ def notify(subject, content):
         msg["From"] = sender_email
         msg["To"] = to_email
         msg.set_content(content)
-        
-        smtp = get_smtp()
-        if smtp is None:
-            return
         smtp.send_message(
             msg,
             to_addrs=[msg["To"]]
         )
+        
     except (Exception,) as e:
         logging.error(e)
         return
-
         
 
 @bp.post('/newsletter/subscribe')
