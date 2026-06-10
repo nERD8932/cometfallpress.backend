@@ -7,6 +7,7 @@ from typing import Optional
 from sqlalchemy import MetaData
 from flask_migrate import Migrate
 from flask_limiter import Limiter
+from flask_executor import Executor
 from flask_login import LoginManager
 from flask_wtf.csrf import CSRFProtect
 from flask_sqlalchemy import SQLAlchemy
@@ -31,6 +32,7 @@ allowed_image_mimes = {"jpg", "jpeg", "png", "webp"}
 upload_path = Path(os.getenv("UPLOAD_PATH", ""))
 backend_origin = os.getenv('BACKEND_ORIGIN', 'https://api.cometfallpress.com')
 hasher = hashlib.sha256()
+executor = Executor()
 smtp: Optional[smtplib.SMTP_SSL] = None
 
 def get_smtp() -> smtplib.SMTP_SSL | None:
@@ -47,7 +49,7 @@ def get_smtp() -> smtplib.SMTP_SSL | None:
             smtp = None
 
     try:
-        smtp = smtplib.SMTP_SSL("smtp.gmail.com", 465)
+        smtp = smtplib.SMTP_SSL("smtp.gmail.com", 465, timeout=10)
         smtp.login(
             os.getenv("GMAIL_USER", ""),
             os.getenv("GMAIL_PASSWORD", ""),

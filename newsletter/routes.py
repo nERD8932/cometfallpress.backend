@@ -15,6 +15,7 @@ from flask_login import login_required, login_user, logout_user, current_user
 from .extensions import (
     logger,
     limiter,
+    executor,
     get_smtp,
     hash_file,
     upload_path,
@@ -44,9 +45,15 @@ def notify(subject, content):
         )
         
     except (Exception,) as e:
-        logging.error(e)
         return
-        
+
+
+def notify_async(subject, content):
+    executor.submit(
+        notify,
+        subject,
+        content
+    )
 
 @bp.post('/newsletter/subscribe')
 @limiter.limit("5 per hour")
@@ -69,14 +76,14 @@ def subscribe():
             user = NewsletterUser(email=email, name=name, unsubscribe_secret=secret)
             db.session.add(user)
             db.session.commit()
-            notify(subject="CometfallPress: New Subscriber!", content="A new user has subscribed to the CometfallPress Newsletter! Login to see related details.")
+            notify_async(subject="CometfallPress: New Subscriber!", content="A new user has subscribed to the CometfallPress Newsletter! Login to see related details.")
             return jsonify({"status": "Subscribed!"}), 200
 
         elif existing_user.unsubscribed:
             existing_user.unsubscribe_secret = secret
             existing_user.unsubscribed = False
             db.session.commit()
-            notify(subject="CometfallPress: New Subscriber!", content="A new user has subscribed to the CometfallPress Newsletter! Login to see related details.")
+            notify_async(subject="CometfallPress: New Subscriber!", content="A new user has subscribed to the CometfallPress Newsletter! Login to see related details.")
             return jsonify({"status": "Subscribed!"}), 200
 
         elif not existing_user.unsubscribed:

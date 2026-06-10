@@ -7,7 +7,7 @@ from flask_cors import CORS
 from datetime import timedelta
 from werkzeug.middleware.proxy_fix import ProxyFix
 from werkzeug.security import generate_password_hash
-from .extensions import db, migrate, csrf, login_manager, logger, limiter, upload_path
+from .extensions import db, migrate, csrf, login_manager, logger, limiter, upload_path, executor
 
 
 def create_app():
@@ -37,6 +37,7 @@ def create_app():
     csrf.init_app(app)
     login_manager.init_app(app)
     limiter.init_app(app)
+    executor.init_app(app)
     app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
     app.register_blueprint(bp)
 
