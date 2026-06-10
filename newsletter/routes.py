@@ -25,6 +25,32 @@ from .extensions import (
 
 bp = Blueprint("main", __name__)
 
+def notify(subject, content):
+     try:
+        sender_email = os.environ["GMAIL_USER"]
+        to_email = os.environ["NOTIFY_EMAIL"]
+        if None in [sender_email, to_email]:
+            return
+
+        msg = EmailMessage()
+        msg["Subject"] = subject
+        msg["From"] = sender_email
+        msg["To"] = to_email
+        msg.set_content(content)
+        
+        smtp = get_smtp()
+        if smtp is None:
+            return
+        smtp.send_message(
+            msg,
+            to_addrs=[msg["To"]]
+        )
+    except (Exception,) as e:
+        logging.error(e)
+        return
+
+        
+
 @bp.post('/newsletter/subscribe')
 @limiter.limit("5 per hour")
 def subscribe():
@@ -35,6 +61,8 @@ def subscribe():
     if not email:
         return jsonify({"status": "Email is required"}), 400
 
+    local, domain = email.split("@")
+    email = f"{local.split('+')[0]}@{domain}"
     secret = secrets.token_urlsafe(32)
 
     try:
@@ -44,12 +72,14 @@ def subscribe():
             user = NewsletterUser(email=email, name=name, unsubscribe_secret=secret)
             db.session.add(user)
             db.session.commit()
+            notify(subject="CometfallPress: New Subscriber!", content="A new user has subscribed to the CometfallPress Newsletter! Login to see related details.")
             return jsonify({"status": "Subscribed!"}), 200
 
         elif existing_user.unsubscribed:
             existing_user.unsubscribe_secret = secret
             existing_user.unsubscribed = False
             db.session.commit()
+            notify(subject="CometfallPress: New Subscriber!", content="A new user has subscribed to the CometfallPress Newsletter! Login to see related details.")
             return jsonify({"status": "Subscribed!"}), 200
 
         elif not existing_user.unsubscribed:
