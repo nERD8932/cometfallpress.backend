@@ -27,6 +27,7 @@ migrate = Migrate()
 csrf = CSRFProtect()
 login_manager = LoginManager()
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 limiter = Limiter(key_func=get_remote_address, default_limits=["2000 per day"])
 allowed_image_mimes = {"jpg", "jpeg", "png", "webp"}
 upload_path = Path(os.getenv("UPLOAD_PATH", ""))

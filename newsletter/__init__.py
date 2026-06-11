@@ -1,5 +1,6 @@
-import json
 import os
+import json
+import logging
 from .db import Admin
 from .routes import bp
 from flask import Flask
@@ -9,6 +10,10 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 from werkzeug.security import generate_password_hash
 from .extensions import db, migrate, csrf, login_manager, logger, limiter, upload_path, executor
 
+logging.basicConfig(
+    level=os.getenv("LOG_LEVEL", "INFO"),
+    format="[%(asctime)s] [%(levelname)s] [%(name)s]: %(message)s",
+)
 
 def create_app():
     app = Flask(__name__, static_folder='public', static_url_path='')
