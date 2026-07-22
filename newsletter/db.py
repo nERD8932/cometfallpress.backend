@@ -85,6 +85,7 @@ class NewsletterUser(db.Model):
             "email": self.email,
             "name": self.name if self.name else None,
             "date_joined": self.datetime_joined.strftime("%A, %B %d, %Y") if self.datetime_joined else None,
+            "unsubscribe_secret": str(self.unsubscribe_secret) if self.unsubscribe_secret else None,
         }
 
 

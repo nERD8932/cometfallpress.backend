@@ -163,7 +163,6 @@ def unsubscribe(secret):
 			return jsonify({"status": "Invalid request!"}), 400
 		else:
 			existing_user.unsubscribed = True
-			db.session.update(existing_user)
 			db.session.commit()
 			return jsonify({"status": "Unsubscribed!"}), 200
 	except (Exception,):
