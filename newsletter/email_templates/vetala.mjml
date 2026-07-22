@@ -72,7 +72,7 @@
           No longer interested?
           You can always unsubscribe from the newsletter by clicking 
           <a
-            href="https://www.cometfallpress.com/unsubscribe/{{secret}}"
+            href="https://www.cometfallpress.com/newsletter/unsubscribe/{{secret}}"
             style="color:#777777;"
           >
           here
