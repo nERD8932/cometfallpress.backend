@@ -1,0 +1,85 @@
+<mjml>
+  <mj-head>
+    <mj-title>Welcome to Sunless Dunes</mj-title>
+    <mj-preview>Your Vetala monster stat-block awaits!</mj-preview>
+
+    <mj-attributes>
+      <mj-all font-family="Arial, Helvetica, sans-serif" />
+      <mj-text font-size="16px" color="#333333" line-height="1.6" />
+      <mj-button background-color="#222222" color="#ffffff" border-radius="4px" />
+    </mj-attributes>
+  </mj-head>
+
+  <mj-body background-color="#f5f5f5">
+
+    <!-- Logo -->
+    <mj-section background-color="#ffffff" padding="30px 30px 10px">
+      <mj-column>
+        <mj-image
+          src="https://cometfallpress.com/WebsiteLogo.png"
+          alt="CometfallPress Logo"
+          width="180px"
+          align="center"
+        />
+      </mj-column>
+    </mj-section>
+
+    <mj-section background-color="#ffffff" padding="10px 30px 30px">
+      <mj-column>
+
+        <mj-text font-size="24px" font-weight="bold">
+          Hi{{name}}!
+        </mj-text>
+
+        <mj-text>
+          Thanks for subscribing to our newsletter!
+        </mj-text>
+
+        <mj-text>
+          The PDF below contains the stat-block for a monster called
+          <strong>"Vetala"</strong> from our campaign,
+          <strong>Sunless Dunes</strong>.
+        </mj-text>
+
+        <mj-text>
+          We'd love to hear your feedback! You can find links to our feedback form, Kickstarter page,
+          and Discord community in the PDF itself, or on our <a href="https://www.cometfallpress.com/">website</a>.
+        </mj-text>
+
+        <mj-spacer height="20px" />
+
+        <mj-button href="https://cometfallpress.com/VetalaPreview.pdf">
+          Download Vetala Stat-Block PDF
+        </mj-button>
+
+        <mj-spacer height="20px" />
+
+        <mj-text>
+          Stay tuned for more updates from <strong>Sunless Dunes</strong> &colon;&rpar;
+        </mj-text>
+
+        <mj-text>
+          Best,<br />
+          Cometfall Press Team
+        </mj-text>
+
+      </mj-column>
+    </mj-section>
+
+    <mj-section>
+      <mj-column>
+        <mj-text font-size="12px" color="#777777" align="center">
+          No longer interested?
+          You can always unsubscribe from the newsletter by clicking 
+          <a
+            href="https://www.cometfallpress.com/unsubscribe/{{secret}}"
+            style="color:#777777;"
+          >
+          here
+          </a>.
+        </mj-text>
+      </mj-column>
+    </mj-section>
+
+  </mj-body>
+</mjml>

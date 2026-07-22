@@ -1,0 +1,17 @@
+Hi{{name}}!
+
+Thanks for subscribing to our newsletter!
+
+The PDF below contains the stat-block for a monster called "Vetala" from our campaign, Sunless Dunes.
+We'd love to hear your feedback! You can find links to our feedback form, Kickstarter page,
+and Discord community in the PDF itself, or on our website.
+
+Stay tuned for more updates from Sunless Dunes :)
+
+Best,
+The CometfallPress Team
+
+
+Download Vetala Stat-Block PDF at https://cometfallpress.com/VetalaPreview.pdf
+
+No longer interested? You can always unsubscribe from the newsletter by going to https://www.cometfallpress.com/unsubscribe/{{secret}}

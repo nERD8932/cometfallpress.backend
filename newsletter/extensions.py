@@ -34,21 +34,9 @@ upload_path = Path(os.getenv("UPLOAD_PATH", ""))
 backend_origin = os.getenv('BACKEND_ORIGIN', 'https://api.cometfallpress.com')
 hasher = hashlib.sha256()
 executor = Executor()
-smtp: Optional[smtplib.SMTP_SSL] = None
 
 def get_smtp() -> smtplib.SMTP_SSL | None:
-    global smtp
-    if smtp is not None:
-        try:
-            smtp.noop()
-            return smtp
-        except (Exception, ):
-            try:
-                smtp.quit()
-            except (Exception, ):
-                pass
-            smtp = None
-
+    smtp = None
     try:
         smtp = smtplib.SMTP_SSL("smtp.gmail.com", 465, timeout=10)
         smtp.login(
