@@ -35,7 +35,7 @@ def create_app():
     CORS(
         app,
         supports_credentials=True,
-        origins=[os.getenv("FRONTEND_ORIGIN", ""), "https://cometfallpress.com", "https://www.cometfallpress.com", "https://api.cometfallpress.com"]
+        origins=[os.getenv("FRONTEND_ORIGIN", ""), "https://cometfallpress.com", "https://www.cometfallpress.com", "https://api.cometfallpress.com", "https://v2.cometfallpress.com"]
     )
     db.init_app(app)
     migrate.init_app(app, db)
